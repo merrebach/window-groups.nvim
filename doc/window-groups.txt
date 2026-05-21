@@ -8,8 +8,11 @@ Table of Contents                            *window-groups-table-of-contents*
   - Requirements               |window-groups-window-groups.nvim-requirements|
   - Installation               |window-groups-window-groups.nvim-installation|
   - Setup                             |window-groups-window-groups.nvim-setup|
+  - Keymaps                         |window-groups-window-groups.nvim-keymaps|
   - API                                 |window-groups-window-groups.nvim-api|
   - Highlights                   |window-groups-window-groups.nvim-highlights|
+  - Filetypes                     |window-groups-window-groups.nvim-filetypes|
+  - Icon providers           |window-groups-window-groups.nvim-icon-providers|
   - Behaviour notes         |window-groups-window-groups.nvim-behaviour-notes|
   - Contributing               |window-groups-window-groups.nvim-contributing|
   - License                         |window-groups-window-groups.nvim-license|
@@ -33,8 +36,9 @@ REQUIREMENTS                   *window-groups-window-groups.nvim-requirements*
 
 INSTALLATION                   *window-groups-window-groups.nvim-installation*
 
+**lazy.nvim** (recommended)
+
 >lua
-    -- lazy.nvim
     {
       "merrebach/window-groups.nvim",
       config = function()
@@ -43,8 +47,36 @@ INSTALLATION                   *window-groups-window-groups.nvim-installation*
     }
 <
 
+**packer.nvim**
+
+>lua
+    use {
+      "merrebach/window-groups.nvim",
+      config = function()
+        require("window_groups").setup({})
+      end,
+    }
+<
+
+**mini.deps**
+
+>lua
+    MiniDeps.add("merrebach/window-groups.nvim")
+    require("window_groups").setup({})
+<
+
+**vim-plug**
+
+>vim
+    Plug 'merrebach/window-groups.nvim'
+    " then in your init.lua or after plug#end():
+    lua require("window_groups").setup({})
+<
+
 
 SETUP                                 *window-groups-window-groups.nvim-setup*
+
+All options with their defaults:
 
 >lua
     require("window_groups").setup({
@@ -54,12 +86,11 @@ SETUP                                 *window-groups-window-groups.nvim-setup*
       -- Set to false if you manage vim.o.winbar yourself (heirline, lualine, etc.)
       winbar = true,
     
-      -- Custom icon resolver. nil = auto-detect: nvim-web-devicons -> mini.icons -> plain text
+      -- Custom icon resolver. nil = auto-detect: nvim-web-devicons → mini.icons → plain text
       -- Signature: function(buf: integer) -> icon: string, hl_name: string|nil
       get_icon = nil,
     
       -- Override fallback highlight specs. Applied on top of colorscheme-defined values.
-      -- See the Highlights section for group names and defaults.
       highlights = {
         active   = {},
         current  = {},
@@ -67,20 +98,77 @@ SETUP                                 *window-groups-window-groups.nvim-setup*
         sep      = {},
         fill     = {},
       },
+    
+      -- Default keymaps. Pass false to disable all, or a table to replace entirely.
+      -- See the Keymaps section for the full default set.
+      keys = nil,  -- nil → register defaults
     })
 <
 
 
-API                                     *window-groups-window-groups.nvim-api*
+KEYMAPS                             *window-groups-window-groups.nvim-keymaps*
 
-No keymaps are set by default. Wire up the API functions yourself.
+Default keymaps registered by `setup()`:
+
+  Key           Action
+  ------------- ---------------------------------------------
+  <leader>q     Close current buffer
+  <leader>bq    Close all buffers in current window’s group
+  ]b            Cycle to next buffer in group
+  [b            Cycle to previous buffer in group
+  <leader>bmh   Move buffer to left window
+  <leader>bmj   Move buffer to bottom window
+  <leader>bmk   Move buffer to top window
+  <leader>bml   Move buffer to right window
+**Disable all default keymaps:**
+
+>lua
+    require("window_groups").setup({ keys = false })
+<
+
+**Replace with your own keymaps:**
+
+>lua
+    require("window_groups").setup({
+      keys = {
+        { "<leader>x",  function() require("window_groups").close_buf() end,   desc = "Close buffer" },
+        { "<leader>X",  function() require("window_groups").close_group() end, desc = "Close group" },
+        { "<Tab>",      function() require("window_groups").cycle("next") end,  desc = "Next buffer" },
+        { "<S-Tab>",    function() require("window_groups").cycle("prev") end,  desc = "Prev buffer" },
+      },
+    })
+<
+
+**lazy.nvim: use the keys spec for lazy-loading** (advanced — not needed for
+most setups):
+
+>lua
+    {
+      "merrebach/window-groups.nvim",
+      config = function()
+        require("window_groups").setup({ keys = false })  -- don't register again inside setup
+      end,
+      keys = {
+        { "<leader>q",  function() require("window_groups").close_buf() end,   desc = "Close buffer" },
+        { "<leader>bq", function() require("window_groups").close_group() end, desc = "Close group" },
+        { "]b",         function() require("window_groups").cycle("next") end,  desc = "Next buffer" },
+        { "[b",         function() require("window_groups").cycle("prev") end,  desc = "Prev buffer" },
+      },
+    }
+<
+
+
+  **Note:** lazy-loading window-groups is not recommended. The plugin must run at
+  startup to seed the initial window group and set up the winbar.
+
+API                                     *window-groups-window-groups.nvim-api*
 
 >lua
     local wg = require("window_groups")
     
     -- Buffer lifecycle
     wg.close_buf()                      -- close current buffer, show neighbor; close window if group empty
-    wg.close_group()                    -- close all buffers in current window's group
+    wg.close_group()                    -- close all buffers in current window's group and close the window
     
     -- Navigation
     wg.cycle("next" | "prev")           -- cycle through buffers in current window's group
@@ -91,34 +179,17 @@ No keymaps are set by default. Wire up the API functions yourself.
     
     -- Introspection
     wg.eligible(buf)                    -- bool: can this buffer join a group
-    wg.list(win)                        -- ordered buffer list for a window
+    wg.list(win)                        -- ordered buffer list for a window (integers)
     wg.add(win, buf)                    -- add buffer to window's group
     wg.remove(win, buf)                 -- remove buffer from window's group
 <
 
 
-REFERENCE KEYMAP BLOCK ~
-
->lua
-    -- lazy.nvim keys table
-    keys = {
-      { "<leader>q",   function() require("window_groups").close_buf() end,           desc = "Close buffer" },
-      { "<leader>bq",  function() require("window_groups").close_group() end,         desc = "Close group" },
-      { "]b",          function() require("window_groups").cycle("next") end,          desc = "Next buffer" },
-      { "[b",          function() require("window_groups").cycle("prev") end,          desc = "Prev buffer" },
-      { "<leader>bmh", function() require("window_groups").move_buf("h") end,         desc = "Move buf left" },
-      { "<leader>bmj", function() require("window_groups").move_buf("j") end,         desc = "Move buf down" },
-      { "<leader>bmk", function() require("window_groups").move_buf("k") end,         desc = "Move buf up" },
-      { "<leader>bml", function() require("window_groups").move_buf("l") end,         desc = "Move buf right" },
-    },
-<
-
-
 HIGHLIGHTS                       *window-groups-window-groups.nvim-highlights*
 
-Set any of these groups in your colorscheme. If undefined, fallbacks are
-derived from `TabLine`, `TabLineSel`, and `Normal` at setup time and refreshed
-on `ColorScheme`.
+Set any of these groups in your colorscheme. If a group is not defined,
+fallbacks are derived from `TabLine`, `TabLineSel`, and `Normal` at setup time
+and refreshed on `ColorScheme`.
 
   -----------------------------------------------------------------------
   Group                               Meaning
@@ -136,17 +207,32 @@ on `ColorScheme`.
 
   GroupsFill                          Winbar space after all tabs
   -----------------------------------------------------------------------
-Override via setup:
+**Override a single key via setup:**
 
 >lua
     require("window_groups").setup({
       highlights = {
-        active = { fg = "#d4c5a9", bold = true },
+        active = { fg = "#d4c5a9", bold = true },  -- bold active tab, custom foreground
       },
     })
 <
 
-Or directly in your colorscheme (takes precedence over fallbacks):
+**Override all groups at once:**
+
+>lua
+    require("window_groups").setup({
+      highlights = {
+        active   = { fg = "#d4c5a9", bg = "#3d3d3d", bold = true },
+        current  = { fg = "#9a9a8a", bg = "#2a2a2a" },
+        inactive = { fg = "#5a5a4a", bg = "#2a2a2a" },
+        sep      = { fg = "#3d3d3d", bg = "#2a2a2a" },
+        fill     = { bg = "#2a2a2a" },
+      },
+    })
+<
+
+**Define groups directly in your colorscheme** (takes precedence over setup
+overrides):
 
 >lua
     vim.api.nvim_set_hl(0, "GroupsActive",   { bg = "#3d3d3d", fg = "#d4c5a9", bold = true })
@@ -157,20 +243,64 @@ Or directly in your colorscheme (takes precedence over fallbacks):
 <
 
 If you use singularity.nvim <https://github.com/merrebach/singularity.nvim>,
-highlight groups are defined automatically.
+all highlight groups are defined automatically when `integrations.window_groups
+= true` (default).
+
+
+FILETYPES                         *window-groups-window-groups.nvim-filetypes*
+
+Add filetypes that should not participate in groups. These are merged with the
+built-in exclusions (`neo-tree`, `snacks_dashboard`, `dashboard`):
+
+>lua
+    require("window_groups").setup({
+      exclude_filetypes = { "NvimTree", "Outline", "aerial", "toggleterm" },
+    })
+<
+
+Windows showing an excluded filetype get no winbar strip and their buffers are
+never added to any group.
+
+
+ICON PROVIDERS               *window-groups-window-groups.nvim-icon-providers*
+
+`get_icon` lets you supply your own resolver instead of the auto-detected one:
+
+>lua
+    -- Always use a fixed icon regardless of filetype
+    require("window_groups").setup({
+      get_icon = function(buf)
+        return "•", nil  -- icon string, optional highlight name
+      end,
+    })
+    
+    -- Use nvim-web-devicons explicitly, ignoring mini.icons even if present
+    require("window_groups").setup({
+      get_icon = function(buf)
+        local ok, devicons = pcall(require, "nvim-web-devicons")
+        if not ok then return "", nil end
+        local name = vim.api.nvim_buf_get_name(buf)
+        local icon, hl = devicons.get_icon(name, vim.fn.fnamemodify(name, ":e"), { default = true })
+        return icon or "", hl
+      end,
+    })
+<
 
 
 BEHAVIOUR NOTES             *window-groups-window-groups.nvim-behaviour-notes*
 
-- **Single-membership is per-tabpage.** A buffer can appear in different groups across different tabpages. Within one tabpage, it belongs to at most one group.
+- **Single-membership is per-tabpage.** A buffer can appear in different groups across tabpages. Within one tabpage it belongs to at most one group.
 - **Winbar only appears on editor windows.** Floats, explorer sidebars, help, quickfix, and terminal windows render no winbar strip.
 - **setup() is idempotent.** Calling it more than once is a no-op.
+- **move_buf fails silently on non-editor neighbors.** If the neighbor window is a sidebar or float, a warning is shown and the buffer stays where it is.
+- **close_buf on an ineligible buffer** (terminal, scratch) falls back to `:bdelete` — no group logic applies.
+- **split with no eligible buffer** opens a blank scratch split with no group entry.
 
 
 CONTRIBUTING                   *window-groups-window-groups.nvim-contributing*
 
-See `CONTEXT.md` for the domain glossary and
-`docs/adr/0001-window-scoped-groups.md` for the architectural rationale.
+See `CONTRIBUTING.md` <CONTRIBUTING.md> and `CONTEXT.md` for the domain
+glossary.
 
 >sh
     make install-hooks   # install pre-commit lint hook
