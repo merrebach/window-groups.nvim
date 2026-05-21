@@ -308,6 +308,17 @@ local function setup_default_highlights(hl_opts)
 	end
 end
 
+local DEFAULT_KEYS = {
+	{ "<leader>q",   function() M.close_buf() end,     desc = "Close buffer" },
+	{ "<leader>bq",  function() M.close_group() end,   desc = "Close group" },
+	{ "]b",          function() M.cycle("next") end,    desc = "Next buffer" },
+	{ "[b",          function() M.cycle("prev") end,    desc = "Prev buffer" },
+	{ "<leader>bmh", function() M.move_buf("h") end,   desc = "Move buf left" },
+	{ "<leader>bmj", function() M.move_buf("j") end,   desc = "Move buf down" },
+	{ "<leader>bmk", function() M.move_buf("k") end,   desc = "Move buf up" },
+	{ "<leader>bml", function() M.move_buf("l") end,   desc = "Move buf right" },
+}
+
 local _setup_done = false
 
 function M.setup(opts)
@@ -315,6 +326,9 @@ function M.setup(opts)
 	_setup_done = true
 
 	opts = opts or {}
+	local keys_opt = opts.keys
+	opts = vim.tbl_extend("force", {}, opts)
+	opts.keys = nil
 	M.config = vim.tbl_deep_extend("force", M.config, opts)
 	build_exclude_set()
 
@@ -332,6 +346,12 @@ function M.setup(opts)
 		end,
 	})
 	setup_default_highlights(M.config.highlights)
+
+	-- keys: nil → defaults, false → none, table → use provided
+	local maps = (keys_opt == false) and {} or (type(keys_opt) == "table" and keys_opt or DEFAULT_KEYS)
+	for _, map in ipairs(maps) do
+		vim.keymap.set("n", map[1], map[2], { desc = map.desc, silent = true })
+	end
 
 	for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
 		local buf = vim.api.nvim_win_get_buf(win)
