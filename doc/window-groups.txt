@@ -1,15 +1,188 @@
-*window-groups.txt*   Window-scoped buffer groups for Neovim
-
-Generated from README.md by panvimdoc. Run CI or `panvimdoc` locally to rebuild.
-
-==============================================================================
-CONTENTS                                              *window-groups-contents*
-
-  1. Requirements .......................... |window-groups-requirements|
-  2. Installation .......................... |window-groups-installation|
-  3. Setup ................................. |window-groups-setup|
-  4. API ................................... |window-groups-api|
-  5. Highlights ............................ |window-groups-highlights|
+*window-groups.txt*
+                              For Neovim >= 0.10.0    Last change: 2026 May 21
 
 ==============================================================================
-vim:tw=78:ts=8:ft=help:norl:
+Table of Contents                            *window-groups-table-of-contents*
+
+1. window-groups.nvim                       |window-groups-window-groups.nvim|
+  - Requirements               |window-groups-window-groups.nvim-requirements|
+  - Installation               |window-groups-window-groups.nvim-installation|
+  - Setup                             |window-groups-window-groups.nvim-setup|
+  - API                                 |window-groups-window-groups.nvim-api|
+  - Highlights                   |window-groups-window-groups.nvim-highlights|
+  - Behaviour notes         |window-groups-window-groups.nvim-behaviour-notes|
+  - Contributing               |window-groups-window-groups.nvim-contributing|
+  - License                         |window-groups-window-groups.nvim-license|
+
+==============================================================================
+1. window-groups.nvim                       *window-groups-window-groups.nvim*
+
+Window-scoped buffer groups for Neovim. Each split window maintains its own
+ordered list of buffers, rendered as a tab strip in the winbar. Buffers have
+single-membership — opening a buffer already owned by another window
+redirects focus there instead of duplicating it.
+
+Think VS Code editor groups, not Vim tabpages.
+
+
+REQUIREMENTS                   *window-groups-window-groups.nvim-requirements*
+
+- Neovim >= 0.10
+- Optional: nvim-web-devicons <https://github.com/nvim-tree/nvim-web-devicons> or mini.icons <https://github.com/echasnovski/mini.icons> for file icons in the winbar
+
+
+INSTALLATION                   *window-groups-window-groups.nvim-installation*
+
+>lua
+    -- lazy.nvim
+    {
+      "merrebach/window-groups.nvim",
+      config = function()
+        require("window_groups").setup({})
+      end,
+    }
+<
+
+
+SETUP                                 *window-groups-window-groups.nvim-setup*
+
+>lua
+    require("window_groups").setup({
+      -- Filetypes merged with built-in exclusions: neo-tree, snacks_dashboard, dashboard
+      exclude_filetypes = {},
+    
+      -- Set to false if you manage vim.o.winbar yourself (heirline, lualine, etc.)
+      winbar = true,
+    
+      -- Custom icon resolver. nil = auto-detect: nvim-web-devicons -> mini.icons -> plain text
+      -- Signature: function(buf: integer) -> icon: string, hl_name: string|nil
+      get_icon = nil,
+    
+      -- Override fallback highlight specs. Applied on top of colorscheme-defined values.
+      -- See the Highlights section for group names and defaults.
+      highlights = {
+        active   = {},
+        current  = {},
+        inactive = {},
+        sep      = {},
+        fill     = {},
+      },
+    })
+<
+
+
+API                                     *window-groups-window-groups.nvim-api*
+
+No keymaps are set by default. Wire up the API functions yourself.
+
+>lua
+    local wg = require("window_groups")
+    
+    -- Buffer lifecycle
+    wg.close_buf()                      -- close current buffer, show neighbor; close window if group empty
+    wg.close_group()                    -- close all buffers in current window's group
+    
+    -- Navigation
+    wg.cycle("next" | "prev")           -- cycle through buffers in current window's group
+    
+    -- Layout
+    wg.move_buf("h" | "j" | "k" | "l") -- move current buffer to the neighbor window in that direction
+    wg.split("h" | "j" | "k" | "l")    -- open a split, carry current buffer into the new window
+    
+    -- Introspection
+    wg.eligible(buf)                    -- bool: can this buffer join a group
+    wg.list(win)                        -- ordered buffer list for a window
+    wg.add(win, buf)                    -- add buffer to window's group
+    wg.remove(win, buf)                 -- remove buffer from window's group
+<
+
+
+REFERENCE KEYMAP BLOCK ~
+
+>lua
+    -- lazy.nvim keys table
+    keys = {
+      { "<leader>q",   function() require("window_groups").close_buf() end,           desc = "Close buffer" },
+      { "<leader>bq",  function() require("window_groups").close_group() end,         desc = "Close group" },
+      { "]b",          function() require("window_groups").cycle("next") end,          desc = "Next buffer" },
+      { "[b",          function() require("window_groups").cycle("prev") end,          desc = "Prev buffer" },
+      { "<leader>bmh", function() require("window_groups").move_buf("h") end,         desc = "Move buf left" },
+      { "<leader>bmj", function() require("window_groups").move_buf("j") end,         desc = "Move buf down" },
+      { "<leader>bmk", function() require("window_groups").move_buf("k") end,         desc = "Move buf up" },
+      { "<leader>bml", function() require("window_groups").move_buf("l") end,         desc = "Move buf right" },
+    },
+<
+
+
+HIGHLIGHTS                       *window-groups-window-groups.nvim-highlights*
+
+Set any of these groups in your colorscheme. If undefined, fallbacks are
+derived from `TabLine`, `TabLineSel`, and `Normal` at setup time and refreshed
+on `ColorScheme`.
+
+  -----------------------------------------------------------------------
+  Group                               Meaning
+  ----------------------------------- -----------------------------------
+  GroupsActive                        Tab in the focused window,
+                                      currently visible buffer
+
+  GroupsCurrent                       Tab in an unfocused window,
+                                      currently visible buffer
+
+  GroupsInactive                      Tab whose buffer is not currently
+                                      visible
+
+  GroupsSep                           Separator │ between tabs
+
+  GroupsFill                          Winbar space after all tabs
+  -----------------------------------------------------------------------
+Override via setup:
+
+>lua
+    require("window_groups").setup({
+      highlights = {
+        active = { fg = "#d4c5a9", bold = true },
+      },
+    })
+<
+
+Or directly in your colorscheme (takes precedence over fallbacks):
+
+>lua
+    vim.api.nvim_set_hl(0, "GroupsActive",   { bg = "#3d3d3d", fg = "#d4c5a9", bold = true })
+    vim.api.nvim_set_hl(0, "GroupsCurrent",  { bg = "#2a2a2a", fg = "#9a9a8a" })
+    vim.api.nvim_set_hl(0, "GroupsInactive", { bg = "#2a2a2a", fg = "#5a5a4a" })
+    vim.api.nvim_set_hl(0, "GroupsSep",      { bg = "#2a2a2a", fg = "#3d3d3d" })
+    vim.api.nvim_set_hl(0, "GroupsFill",     { bg = "#2a2a2a" })
+<
+
+If you use singularity.nvim <https://github.com/merrebach/singularity.nvim>,
+highlight groups are defined automatically.
+
+
+BEHAVIOUR NOTES             *window-groups-window-groups.nvim-behaviour-notes*
+
+- **Single-membership is per-tabpage.** A buffer can appear in different groups across different tabpages. Within one tabpage, it belongs to at most one group.
+- **Winbar only appears on editor windows.** Floats, explorer sidebars, help, quickfix, and terminal windows render no winbar strip.
+- **setup() is idempotent.** Calling it more than once is a no-op.
+
+
+CONTRIBUTING                   *window-groups-window-groups.nvim-contributing*
+
+See `CONTEXT.md` for the domain glossary and
+`docs/adr/0001-window-scoped-groups.md` for the architectural rationale.
+
+>sh
+    make install-hooks   # install pre-commit lint hook
+    make lint            # run luacheck
+    make test            # run plenary tests (requires Neovim in PATH)
+<
+
+
+LICENSE                             *window-groups-window-groups.nvim-license*
+
+MIT — see LICENSE <LICENSE>.
+
+Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
+
+vim:tw=78:ts=8:noet:ft=help:norl:
