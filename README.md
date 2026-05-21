@@ -99,10 +99,14 @@ require("window_groups").setup({ keys = false })
 ```lua
 require("window_groups").setup({
   keys = {
-    { "<leader>x",  function() require("window_groups").close_buf() end,   desc = "Close buffer" },
-    { "<leader>X",  function() require("window_groups").close_group() end, desc = "Close group" },
-    { "<Tab>",      function() require("window_groups").cycle("next") end,  desc = "Next buffer" },
-    { "<S-Tab>",    function() require("window_groups").cycle("prev") end,  desc = "Prev buffer" },
+    { "<leader>x",   function() require("window_groups").close_buf() end,          desc = "Close buffer" },
+    { "<leader>X",   function() require("window_groups").close_group() end,        desc = "Close group" },
+    { "<Tab>",       function() require("window_groups").cycle("next") end,         desc = "Next buffer" },
+    { "<S-Tab>",     function() require("window_groups").cycle("prev") end,         desc = "Prev buffer" },
+    { "<leader>bmh", function() require("window_groups").move_buf("left") end,     desc = "Move buf left" },
+    { "<leader>bml", function() require("window_groups").move_buf("right") end,    desc = "Move buf right" },
+    { "<leader>bmk", function() require("window_groups").move_buf("up") end,       desc = "Move buf up" },
+    { "<leader>bmj", function() require("window_groups").move_buf("down") end,     desc = "Move buf down" },
   },
 })
 ```
@@ -138,8 +142,8 @@ wg.close_group()                    -- close all buffers in current window's gro
 wg.cycle("next" | "prev")           -- cycle through buffers in current window's group
 
 -- Layout
-wg.move_buf("h" | "j" | "k" | "l") -- move current buffer to the neighbor window in that direction
-wg.split("h" | "j" | "k" | "l")    -- open a split, carry current buffer into the new window
+wg.move_buf("left" | "right" | "up" | "down") -- move current buffer to the neighbor window in that direction
+wg.split("left" | "right" | "up" | "down")    -- open a split, carry current buffer into the new window
 
 -- Introspection
 wg.eligible(buf)                    -- bool: can this buffer join a group

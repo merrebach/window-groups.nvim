@@ -171,7 +171,7 @@ function M.cycle(direction)
 	vim.api.nvim_win_set_buf(win, list[new_idx])
 end
 
-local DIR_TO_WINCMD = { h = "h", j = "j", k = "k", l = "l" }
+local DIR_TO_WINCMD = { left = "h", right = "l", up = "k", down = "j" }
 
 function M.move_buf(direction)
 	local wincmd = DIR_TO_WINCMD[direction]
@@ -230,10 +230,10 @@ function M.split(direction)
 		end
 	end
 	local cmd = ({
-		h = "leftabove vnew",
-		l = "rightbelow vnew",
-		k = "leftabove new",
-		j = "rightbelow new",
+		left  = "leftabove vnew",
+		right = "rightbelow vnew",
+		up    = "leftabove new",
+		down  = "rightbelow new",
 	})[direction]
 	if not cmd then return end
 	local buf = vim.api.nvim_win_get_buf(src_win)
@@ -309,14 +309,14 @@ local function setup_default_highlights(hl_opts)
 end
 
 local DEFAULT_KEYS = {
-	{ "<leader>q",   function() M.close_buf() end,     desc = "Close buffer" },
-	{ "<leader>bq",  function() M.close_group() end,   desc = "Close group" },
-	{ "]b",          function() M.cycle("next") end,    desc = "Next buffer" },
-	{ "[b",          function() M.cycle("prev") end,    desc = "Prev buffer" },
-	{ "<leader>bmh", function() M.move_buf("h") end,   desc = "Move buf left" },
-	{ "<leader>bmj", function() M.move_buf("j") end,   desc = "Move buf down" },
-	{ "<leader>bmk", function() M.move_buf("k") end,   desc = "Move buf up" },
-	{ "<leader>bml", function() M.move_buf("l") end,   desc = "Move buf right" },
+	{ "<leader>q",   function() M.close_buf() end,          desc = "Close buffer" },
+	{ "<leader>bq",  function() M.close_group() end,        desc = "Close group" },
+	{ "]b",          function() M.cycle("next") end,         desc = "Next buffer" },
+	{ "[b",          function() M.cycle("prev") end,         desc = "Prev buffer" },
+	{ "<leader>bmh", function() M.move_buf("left") end,     desc = "Move buf left" },
+	{ "<leader>bmj", function() M.move_buf("down") end,     desc = "Move buf down" },
+	{ "<leader>bmk", function() M.move_buf("up") end,       desc = "Move buf up" },
+	{ "<leader>bml", function() M.move_buf("right") end,    desc = "Move buf right" },
 }
 
 local _setup_done = false
