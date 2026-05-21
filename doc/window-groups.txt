@@ -86,17 +86,27 @@ All options with their defaults:
       -- Set to false if you manage vim.o.winbar yourself (heirline, lualine, etc.)
       winbar = true,
     
+      -- Set to false to disable the group boundary accent and WinSeparator styling.
+      border = true,
+    
+      -- Character rendered at the left edge of each winbar to signal a group boundary.
+      border_char = "▎",
+    
       -- Custom icon resolver. nil = auto-detect: nvim-web-devicons → mini.icons → plain text
       -- Signature: function(buf: integer) -> icon: string, hl_name: string|nil
       get_icon = nil,
     
       -- Override fallback highlight specs. Applied on top of colorscheme-defined values.
       highlights = {
-        active   = {},
-        current  = {},
-        inactive = {},
-        sep      = {},
-        fill     = {},
+        active          = {},
+        current         = {},
+        inactive        = {},
+        sep             = {},
+        fill            = {},
+        accent_active   = {},   -- border_char in the focused window
+        accent_inactive = {},   -- border_char in unfocused windows
+        winsep_active   = {},   -- WinSeparator for the focused window
+        winsep_inactive = {},   -- WinSeparator for unfocused windows
       },
     
       -- Default keymaps. Pass false to disable all, or a table to replace entirely.
@@ -210,6 +220,18 @@ and refreshed on `ColorScheme`.
   GroupsSep                           Separator │ between tabs
 
   GroupsFill                          Winbar space after all tabs
+
+  GroupsAccentActive                  border_char in the focused window’s
+                                      winbar
+
+  GroupsAccentInactive                border_char in unfocused windows’
+                                      winbars
+
+  GroupsWinSepActive                  WinSeparator override for the
+                                      focused window
+
+  GroupsWinSepInactive                WinSeparator override for unfocused
+                                      windows
   -----------------------------------------------------------------------
 **Override a single key via setup:**
 
@@ -226,11 +248,15 @@ and refreshed on `ColorScheme`.
 >lua
     require("window_groups").setup({
       highlights = {
-        active   = { fg = "#d4c5a9", bg = "#3d3d3d", bold = true },
-        current  = { fg = "#9a9a8a", bg = "#2a2a2a" },
-        inactive = { fg = "#5a5a4a", bg = "#2a2a2a" },
-        sep      = { fg = "#3d3d3d", bg = "#2a2a2a" },
-        fill     = { bg = "#2a2a2a" },
+        active          = { fg = "#d4c5a9", bg = "#3d3d3d", bold = true },
+        current         = { fg = "#9a9a8a", bg = "#2a2a2a" },
+        inactive        = { fg = "#5a5a4a", bg = "#2a2a2a" },
+        sep             = { fg = "#3d3d3d", bg = "#2a2a2a" },
+        fill            = { bg = "#2a2a2a" },
+        accent_active   = { fg = "#e06c75" },
+        accent_inactive = { fg = "#4b5263" },
+        winsep_active   = { fg = "#e06c75" },
+        winsep_inactive = { fg = "#3b4048" },
       },
     })
 <
@@ -239,11 +265,15 @@ and refreshed on `ColorScheme`.
 overrides):
 
 >lua
-    vim.api.nvim_set_hl(0, "GroupsActive",   { bg = "#3d3d3d", fg = "#d4c5a9", bold = true })
-    vim.api.nvim_set_hl(0, "GroupsCurrent",  { bg = "#2a2a2a", fg = "#9a9a8a" })
-    vim.api.nvim_set_hl(0, "GroupsInactive", { bg = "#2a2a2a", fg = "#5a5a4a" })
-    vim.api.nvim_set_hl(0, "GroupsSep",      { bg = "#2a2a2a", fg = "#3d3d3d" })
-    vim.api.nvim_set_hl(0, "GroupsFill",     { bg = "#2a2a2a" })
+    vim.api.nvim_set_hl(0, "GroupsActive",        { bg = "#3d3d3d", fg = "#d4c5a9", bold = true })
+    vim.api.nvim_set_hl(0, "GroupsCurrent",       { bg = "#2a2a2a", fg = "#9a9a8a" })
+    vim.api.nvim_set_hl(0, "GroupsInactive",      { bg = "#2a2a2a", fg = "#5a5a4a" })
+    vim.api.nvim_set_hl(0, "GroupsSep",           { bg = "#2a2a2a", fg = "#3d3d3d" })
+    vim.api.nvim_set_hl(0, "GroupsFill",          { bg = "#2a2a2a" })
+    vim.api.nvim_set_hl(0, "GroupsAccentActive",  { fg = "#e06c75" })
+    vim.api.nvim_set_hl(0, "GroupsAccentInactive",{ fg = "#4b5263" })
+    vim.api.nvim_set_hl(0, "GroupsWinSepActive",  { fg = "#e06c75" })
+    vim.api.nvim_set_hl(0, "GroupsWinSepInactive",{ fg = "#3b4048" })
 <
 
 If you use singularity.nvim <https://github.com/merrebach/singularity.nvim>,
