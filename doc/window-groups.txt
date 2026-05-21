@@ -31,7 +31,9 @@ Think VS Code editor groups, not Vim tabpages.
 REQUIREMENTS                   *window-groups-window-groups.nvim-requirements*
 
 - Neovim >= 0.10
-- Optional: nvim-web-devicons <https://github.com/nvim-tree/nvim-web-devicons> or mini.icons <https://github.com/echasnovski/mini.icons> for file icons in the winbar
+- Optional: nvim-web-devicons <https://github.com/nvim-tree/nvim-web-devicons>
+    or mini.icons <https://github.com/echasnovski/mini.icons> for file icons in
+    the winbar
 
 
 INSTALLATION                   *window-groups-window-groups.nvim-installation*
@@ -98,11 +100,11 @@ All options with their defaults:
     
       -- Override fallback highlight specs. Applied on top of colorscheme-defined values.
       highlights = {
-        active          = {},
-        current         = {},
-        inactive        = {},
-        sep             = {},
-        fill            = {},
+        active          = {},   -- focused window's tab in the tabline
+        current         = {},   -- active buffer in an unfocused window's tab
+        inactive        = {},   -- unfocused window's tab in the tabline
+        sep             = {},   -- separator between tabs
+        fill            = {},   -- empty space to the right of all tabs
         accent_active   = {},   -- border_char in the focused window
         accent_inactive = {},   -- border_char in unfocused windows
         winsep_active   = {},   -- WinSeparator for the focused window
@@ -205,34 +207,29 @@ Set any of these groups in your colorscheme. If a group is not defined,
 fallbacks are derived from `TabLine`, `TabLineSel`, and `Normal` at setup time
 and refreshed on `ColorScheme`.
 
-  -----------------------------------------------------------------------
-  Group                               Meaning
-  ----------------------------------- -----------------------------------
-  GroupsActive                        Tab in the focused window,
-                                      currently visible buffer
+  ------------------------------------------------------------------------
+  Group                  Meaning
+  ---------------------- -------------------------------------------------
+  GroupsActive           Tab in the focused window, currently visible
+                         buffer
 
-  GroupsCurrent                       Tab in an unfocused window,
-                                      currently visible buffer
+  GroupsCurrent          Tab in an unfocused window, currently visible
+                         buffer
 
-  GroupsInactive                      Tab whose buffer is not currently
-                                      visible
+  GroupsInactive         Tab whose buffer is not currently visible
 
-  GroupsSep                           Separator │ between tabs
+  GroupsSep              Separator │ between tabs
 
-  GroupsFill                          Winbar space after all tabs
+  GroupsFill             Winbar space after all tabs
 
-  GroupsAccentActive                  border_char in the focused window’s
-                                      winbar
+  GroupsAccentActive     border_char in the focused window’s winbar
 
-  GroupsAccentInactive                border_char in unfocused windows’
-                                      winbars
+  GroupsAccentInactive   border_char in unfocused windows’ winbars
 
-  GroupsWinSepActive                  WinSeparator override for the
-                                      focused window
+  GroupsWinSepActive     WinSeparator override for the focused window
 
-  GroupsWinSepInactive                WinSeparator override for unfocused
-                                      windows
-  -----------------------------------------------------------------------
+  GroupsWinSepInactive   WinSeparator override for unfocused windows
+  ------------------------------------------------------------------------
 **Override a single key via setup:**
 
 >lua
@@ -323,12 +320,17 @@ ICON PROVIDERS               *window-groups-window-groups.nvim-icon-providers*
 
 BEHAVIOUR NOTES             *window-groups-window-groups.nvim-behaviour-notes*
 
-- **Single-membership is per-tabpage.** A buffer can appear in different groups across tabpages. Within one tabpage it belongs to at most one group.
-- **Winbar only appears on editor windows.** Floats, explorer sidebars, help, quickfix, and terminal windows render no winbar strip.
+- **Single-membership is per-tabpage.** A buffer can appear in different groups
+    across tabpages. Within one tabpage it belongs to at most one group.
+- **Winbar only appears on editor windows.** Floats, explorer sidebars, help,
+    quickfix, and terminal windows render no winbar strip.
 - **setup() is idempotent.** Calling it more than once is a no-op.
-- **move_buf fails silently on non-editor neighbors.** If the neighbor window is a sidebar or float, a warning is shown and the buffer stays where it is.
-- **close_buf on an ineligible buffer** (terminal, scratch) falls back to `:bdelete` — no group logic applies.
-- **split with no eligible buffer** opens a blank scratch split with no group entry.
+- **move_buf fails silently on non-editor neighbors.** If the neighbor window
+    is a sidebar or float, a warning is shown and the buffer stays where it is.
+- **close_buf on an ineligible buffer** (terminal, scratch) falls back to
+    `:bdelete` — no group logic applies.
+- **split with no eligible buffer** opens a blank scratch split with no group
+    entry.
 
 
 CONTRIBUTING                   *window-groups-window-groups.nvim-contributing*
