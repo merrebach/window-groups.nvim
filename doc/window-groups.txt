@@ -1,0 +1,15 @@
+*window-groups.txt*   Window-scoped buffer groups for Neovim
+
+Generated from README.md by panvimdoc. Run CI or `panvimdoc` locally to rebuild.
+
+==============================================================================
+CONTENTS                                              *window-groups-contents*
+
+  1. Requirements .......................... |window-groups-requirements|
+  2. Installation .......................... |window-groups-installation|
+  3. Setup ................................. |window-groups-setup|
+  4. API ................................... |window-groups-api|
+  5. Highlights ............................ |window-groups-highlights|
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
