@@ -82,7 +82,13 @@ function M.render()
 			table.insert(parts, "%#" .. hl_name .. "#" .. seg)
 		end
 	end
-	return table.concat(parts, "%#GroupsSep#│") .. "%#GroupsFill#"
+	local config = require("window_groups").config
+	local accent = ""
+	if config.border then
+		local hl = is_active_win and "GroupsAccentActive" or "GroupsAccentInactive"
+		accent = "%#" .. hl .. "#" .. config.border_char
+	end
+	return accent .. table.concat(parts, "%#GroupsSep#│") .. "%#GroupsFill#"
 end
 
 return M

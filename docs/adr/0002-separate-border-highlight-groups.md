@@ -1,0 +1,3 @@
+# Separate Highlight Groups for Accent and WinSeparator
+
+The group-boundary visual feature uses two independent highlight group pairs (`GroupsAccentActive`/`GroupsAccentInactive` for the winbar `▎` character, `GroupsWinSepActive`/`GroupsWinSepInactive` for the `WinSeparator` override via `winhighlight`) rather than one shared pair. Users commonly want the thin split-line and the bold winbar bar to carry different weights — e.g. a bright accent bar with a subtle separator — and collapsing them to one group forces a compromise neither use case wants. The cost is four new config keys (`highlights.accent_active`, `highlights.accent_inactive`, `highlights.winsep_active`, `highlights.winsep_inactive`) instead of two.

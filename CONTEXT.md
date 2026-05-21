@@ -25,8 +25,12 @@ Vim's native full-screen layout container. Not used as a Group in this plugin.
 _Avoid_: Workspace, tab (when referring to a Vim tabpage).
 
 **Winbar**:
-The per-Window status row above the Buffer content. Renders the Group's tab strip.
+The per-Window status row above the Buffer content. Renders the Group's tab strip and Accent.
 _Avoid_: Tabline, bufferline (those are global).
+
+**Accent**:
+The configurable character (default `▎`) rendered at the left edge of a Winbar to signal a Group boundary.
+_Avoid_: Border, divider, indicator.
 
 **Eligible Buffer**:
 A Buffer with `buftype == ""` and `buflisted == true` whose filetype is not in the exclusion list. Only Eligible Buffers can be members of a Group.
@@ -40,6 +44,7 @@ _Avoid_: Real file, normal buffer.
 - Closing the last **Buffer** in a **Group** closes the **Window** and dissolves the **Group**.
 - Opening an **Eligible Buffer** already in another **Group** (in the same tabpage) redirects focus to that Group's Window instead of duplicating membership.
 - Neo-tree, help, quickfix, terminal, and floating Windows have no **Group** and render no **Winbar** strip.
+- A **Group**'s boundary is signaled by an **Accent** in its **Winbar** and a styled `WinSeparator`, both reflecting active/inactive state.
 
 ## Example dialogue
 

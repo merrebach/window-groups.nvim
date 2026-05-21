@@ -8,13 +8,19 @@ local BASE_EXCLUDE = { "neo-tree", "snacks_dashboard", "dashboard" }
 M.config = {
 	exclude_filetypes = {},
 	winbar = true,
+	border = true,
+	border_char = "▎",
 	get_icon = nil,
 	highlights = {
-		active   = {},
-		current  = {},
-		inactive = {},
-		sep      = {},
-		fill     = {},
+		active          = {},
+		current         = {},
+		inactive        = {},
+		sep             = {},
+		fill            = {},
+		accent_active   = {},
+		accent_inactive = {},
+		winsep_active   = {},
+		winsep_inactive = {},
 	},
 }
 
@@ -283,19 +289,28 @@ local function setup_default_highlights(hl_opts)
 	local tabline    = get_hl("TabLine")
 	local comment    = get_hl("Comment")
 	local normal     = get_hl("Normal")
+	local winsep     = get_hl("WinSeparator")
 	local fallbacks = {
-		GroupsActive   = { bg = tablinesel.bg, fg = normal.fg or tablinesel.fg },
-		GroupsCurrent  = { bg = tabline.bg, fg = tabline.fg },
-		GroupsInactive = { bg = tabline.bg, fg = comment.fg or tabline.fg },
-		GroupsSep      = { bg = tabline.bg, fg = comment.fg or tabline.fg },
-		GroupsFill     = { bg = tabline.bg },
+		GroupsActive        = { bg = tablinesel.bg, fg = normal.fg or tablinesel.fg },
+		GroupsCurrent       = { bg = tabline.bg, fg = tabline.fg },
+		GroupsInactive      = { bg = tabline.bg, fg = comment.fg or tabline.fg },
+		GroupsSep           = { bg = tabline.bg, fg = comment.fg or tabline.fg },
+		GroupsFill          = { bg = tabline.bg },
+		GroupsAccentActive  = { fg = tablinesel.bg or tablinesel.fg or normal.fg, bg = normal.bg },
+		GroupsAccentInactive = { fg = tabline.bg or tabline.fg or comment.fg, bg = normal.bg },
+		GroupsWinSepActive  = { fg = tablinesel.bg or tablinesel.fg or normal.fg, bg = winsep.bg },
+		GroupsWinSepInactive = { fg = winsep.fg, bg = winsep.bg },
 	}
 	local overrides = {
-		GroupsActive   = hl_opts.active,
-		GroupsCurrent  = hl_opts.current,
-		GroupsInactive = hl_opts.inactive,
-		GroupsSep      = hl_opts.sep,
-		GroupsFill     = hl_opts.fill,
+		GroupsActive        = hl_opts.active,
+		GroupsCurrent       = hl_opts.current,
+		GroupsInactive      = hl_opts.inactive,
+		GroupsSep           = hl_opts.sep,
+		GroupsFill          = hl_opts.fill,
+		GroupsAccentActive  = hl_opts.accent_active,
+		GroupsAccentInactive = hl_opts.accent_inactive,
+		GroupsWinSepActive  = hl_opts.winsep_active,
+		GroupsWinSepInactive = hl_opts.winsep_inactive,
 	}
 	for group, fallback in pairs(fallbacks) do
 		local override = overrides[group] or {}
@@ -318,6 +333,19 @@ local DEFAULT_KEYS = {
 	{ "<leader>bmk", function() M.move_buf("up") end,       desc = "Move buf up" },
 	{ "<leader>bml", function() M.move_buf("right") end,    desc = "Move buf right" },
 }
+
+local function set_win_sep_hl(win, is_active)
+	if not M.config.border then return end
+	if not vim.api.nvim_win_is_valid(win) then return end
+	local hl_group = is_active and "GroupsWinSepActive" or "GroupsWinSepInactive"
+	local ok, cur = pcall(function() return vim.wo[win].winhighlight end)
+	if not ok then return end
+	local stripped = cur:gsub(",?WinSeparator:[^,]+", ""):gsub("^,+", ""):gsub(",+$", "")
+	local entry = "WinSeparator:" .. hl_group
+	pcall(function()
+		vim.wo[win].winhighlight = stripped ~= "" and (stripped .. "," .. entry) or entry
+	end)
+end
 
 local _setup_done = false
 
@@ -346,6 +374,26 @@ function M.setup(opts)
 		end,
 	})
 	setup_default_highlights(M.config.highlights)
+
+	if M.config.border then
+		local border_aug = vim.api.nvim_create_augroup("WindowGroupsBorder", { clear = true })
+		vim.api.nvim_create_autocmd("WinEnter", {
+			group = border_aug,
+			callback = function()
+				set_win_sep_hl(vim.api.nvim_get_current_win(), true)
+			end,
+		})
+		vim.api.nvim_create_autocmd("WinLeave", {
+			group = border_aug,
+			callback = function()
+				set_win_sep_hl(vim.api.nvim_get_current_win(), false)
+			end,
+		})
+		local cur = vim.api.nvim_get_current_win()
+		for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+			set_win_sep_hl(win, win == cur)
+		end
+	end
 
 	-- keys: nil → defaults, false → none, table → use provided
 	local maps = (keys_opt == false) and {} or (type(keys_opt) == "table" and keys_opt or DEFAULT_KEYS)
