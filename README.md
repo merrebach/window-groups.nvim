@@ -1,17 +1,23 @@
 # window-groups.nvim
 
-Window-scoped buffer groups for Neovim. Each split window maintains its own ordered list of buffers, rendered as a tab strip in the winbar. Buffers have single-membership — opening a buffer already owned by another window redirects focus there instead of duplicating it.
+Window-scoped buffer groups for Neovim. Each split window maintains its own
+ordered list of buffers, rendered as a tab strip in the winbar. Buffers have
+single-membership — opening a buffer already owned by another window redirects
+focus there instead of duplicating it.
 
 Think VS Code editor groups, not Vim tabpages.
 
 ## Requirements
 
 - Neovim >= 0.10
-- Optional: [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons) or [mini.icons](https://github.com/echasnovski/mini.icons) for file icons in the winbar
+- Optional: [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
+  or [mini.icons](https://github.com/echasnovski/mini.icons) for file icons in
+  the winbar
 
 ## Installation
 
 **lazy.nvim** (recommended)
+
 ```lua
 {
   "merrebach/window-groups.nvim",
@@ -22,6 +28,7 @@ Think VS Code editor groups, not Vim tabpages.
 ```
 
 **packer.nvim**
+
 ```lua
 use {
   "merrebach/window-groups.nvim",
@@ -32,12 +39,14 @@ use {
 ```
 
 **mini.deps**
+
 ```lua
 MiniDeps.add("merrebach/window-groups.nvim")
 require("window_groups").setup({})
 ```
 
 **vim-plug**
+
 ```vim
 Plug 'merrebach/window-groups.nvim'
 " then in your init.lua or after plug#end():
@@ -68,11 +77,11 @@ require("window_groups").setup({
 
   -- Override fallback highlight specs. Applied on top of colorscheme-defined values.
   highlights = {
-    active          = {},
-    current         = {},
-    inactive        = {},
-    sep             = {},
-    fill            = {},
+    active          = {},   -- focused window's tab in the tabline
+    current         = {},   -- active buffer in an unfocused window's tab
+    inactive        = {},   -- unfocused window's tab in the tabline
+    sep             = {},   -- separator between tabs
+    fill            = {},   -- empty space to the right of all tabs
     accent_active   = {},   -- border_char in the focused window
     accent_inactive = {},   -- border_char in unfocused windows
     winsep_active   = {},   -- WinSeparator for the focused window
@@ -89,23 +98,25 @@ require("window_groups").setup({
 
 Default keymaps registered by `setup()`:
 
-| Key | Action |
-|---|---|
-| `<leader>q` | Close current buffer |
-| `<leader>bq` | Close all buffers in current window's group |
-| `]b` | Cycle to next buffer in group |
-| `[b` | Cycle to previous buffer in group |
-| `<leader>bmh` | Move buffer to left window |
-| `<leader>bmj` | Move buffer to bottom window |
-| `<leader>bmk` | Move buffer to top window |
-| `<leader>bml` | Move buffer to right window |
+| Key           | Action                                      |
+| ------------- | ------------------------------------------- |
+| `<leader>q`   | Close current buffer                        |
+| `<leader>bq`  | Close all buffers in current window's group |
+| `]b`          | Cycle to next buffer in group               |
+| `[b`          | Cycle to previous buffer in group           |
+| `<leader>bmh` | Move buffer to left window                  |
+| `<leader>bmj` | Move buffer to bottom window                |
+| `<leader>bmk` | Move buffer to top window                   |
+| `<leader>bml` | Move buffer to right window                 |
 
 **Disable all default keymaps:**
+
 ```lua
 require("window_groups").setup({ keys = false })
 ```
 
 **Replace with your own keymaps:**
+
 ```lua
 require("window_groups").setup({
   keys = {
@@ -121,7 +132,9 @@ require("window_groups").setup({
 })
 ```
 
-**lazy.nvim: use the `keys` spec for lazy-loading** (advanced — not needed for most setups):
+**lazy.nvim: use the `keys` spec for lazy-loading** (advanced — not needed for
+most setups):
+
 ```lua
 {
   "merrebach/window-groups.nvim",
@@ -137,7 +150,8 @@ require("window_groups").setup({
 }
 ```
 
-> **Note:** lazy-loading window-groups is not recommended. The plugin must run at startup to seed the initial window group and set up the winbar.
+> **Note:** lazy-loading window-groups is not recommended. The plugin must run
+> at startup to seed the initial window group and set up the winbar.
 
 ## API
 
@@ -164,21 +178,24 @@ wg.remove(win, buf)                 -- remove buffer from window's group
 
 ## Highlights
 
-Set any of these groups in your colorscheme. If a group is not defined, fallbacks are derived from `TabLine`, `TabLineSel`, and `Normal` at setup time and refreshed on `ColorScheme`.
+Set any of these groups in your colorscheme. If a group is not defined,
+fallbacks are derived from `TabLine`, `TabLineSel`, and `Normal` at setup time
+and refreshed on `ColorScheme`.
 
-| Group | Meaning |
-|---|---|
-| `GroupsActive` | Tab in the focused window, currently visible buffer |
-| `GroupsCurrent` | Tab in an unfocused window, currently visible buffer |
-| `GroupsInactive` | Tab whose buffer is not currently visible |
-| `GroupsSep` | Separator `│` between tabs |
-| `GroupsFill` | Winbar space after all tabs |
-| `GroupsAccentActive` | `border_char` in the focused window's winbar |
-| `GroupsAccentInactive` | `border_char` in unfocused windows' winbars |
-| `GroupsWinSepActive` | `WinSeparator` override for the focused window |
-| `GroupsWinSepInactive` | `WinSeparator` override for unfocused windows |
+| Group                  | Meaning                                              |
+| ---------------------- | ---------------------------------------------------- |
+| `GroupsActive`         | Tab in the focused window, currently visible buffer  |
+| `GroupsCurrent`        | Tab in an unfocused window, currently visible buffer |
+| `GroupsInactive`       | Tab whose buffer is not currently visible            |
+| `GroupsSep`            | Separator `│` between tabs                           |
+| `GroupsFill`           | Winbar space after all tabs                          |
+| `GroupsAccentActive`   | `border_char` in the focused window's winbar         |
+| `GroupsAccentInactive` | `border_char` in unfocused windows' winbars          |
+| `GroupsWinSepActive`   | `WinSeparator` override for the focused window       |
+| `GroupsWinSepInactive` | `WinSeparator` override for unfocused windows        |
 
 **Override a single key via setup:**
+
 ```lua
 require("window_groups").setup({
   highlights = {
@@ -188,6 +205,7 @@ require("window_groups").setup({
 ```
 
 **Override all groups at once:**
+
 ```lua
 require("window_groups").setup({
   highlights = {
@@ -204,7 +222,9 @@ require("window_groups").setup({
 })
 ```
 
-**Define groups directly in your colorscheme** (takes precedence over setup overrides):
+**Define groups directly in your colorscheme** (takes precedence over setup
+overrides):
+
 ```lua
 vim.api.nvim_set_hl(0, "GroupsActive",        { bg = "#3d3d3d", fg = "#d4c5a9", bold = true })
 vim.api.nvim_set_hl(0, "GroupsCurrent",       { bg = "#2a2a2a", fg = "#9a9a8a" })
@@ -217,11 +237,14 @@ vim.api.nvim_set_hl(0, "GroupsWinSepActive",  { fg = "#e06c75" })
 vim.api.nvim_set_hl(0, "GroupsWinSepInactive",{ fg = "#3b4048" })
 ```
 
-If you use [singularity.nvim](https://github.com/merrebach/singularity.nvim), all highlight groups are defined automatically when `integrations.window_groups = true` (default).
+If you use [singularity.nvim](https://github.com/merrebach/singularity.nvim),
+all highlight groups are defined automatically when
+`integrations.window_groups = true` (default).
 
 ## Filetypes
 
-Add filetypes that should not participate in groups. These are merged with the built-in exclusions (`neo-tree`, `snacks_dashboard`, `dashboard`):
+Add filetypes that should not participate in groups. These are merged with the
+built-in exclusions (`neo-tree`, `snacks_dashboard`, `dashboard`):
 
 ```lua
 require("window_groups").setup({
@@ -229,7 +252,8 @@ require("window_groups").setup({
 })
 ```
 
-Windows showing an excluded filetype get no winbar strip and their buffers are never added to any group.
+Windows showing an excluded filetype get no winbar strip and their buffers are
+never added to any group.
 
 ## Icon providers
 
@@ -257,16 +281,22 @@ require("window_groups").setup({
 
 ## Behaviour notes
 
-- **Single-membership is per-tabpage.** A buffer can appear in different groups across tabpages. Within one tabpage it belongs to at most one group.
-- **Winbar only appears on editor windows.** Floats, explorer sidebars, help, quickfix, and terminal windows render no winbar strip.
+- **Single-membership is per-tabpage.** A buffer can appear in different groups
+  across tabpages. Within one tabpage it belongs to at most one group.
+- **Winbar only appears on editor windows.** Floats, explorer sidebars, help,
+  quickfix, and terminal windows render no winbar strip.
 - **`setup()` is idempotent.** Calling it more than once is a no-op.
-- **`move_buf` fails silently on non-editor neighbors.** If the neighbor window is a sidebar or float, a warning is shown and the buffer stays where it is.
-- **`close_buf` on an ineligible buffer** (terminal, scratch) falls back to `:bdelete` — no group logic applies.
-- **`split` with no eligible buffer** opens a blank scratch split with no group entry.
+- **`move_buf` fails silently on non-editor neighbors.** If the neighbor window
+  is a sidebar or float, a warning is shown and the buffer stays where it is.
+- **`close_buf` on an ineligible buffer** (terminal, scratch) falls back to
+  `:bdelete` — no group logic applies.
+- **`split` with no eligible buffer** opens a blank scratch split with no group
+  entry.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and `CONTEXT.md` for the domain glossary.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and `CONTEXT.md` for the domain
+glossary.
 
 ```sh
 make install-hooks   # install pre-commit lint hook
