@@ -46,6 +46,14 @@ local function basename(buf)
 	return vim.fn.fnamemodify(name, ":t")
 end
 
+function M.click(buf, clicks, button, modifiers)
+	local groups = require("window_groups")
+	local callbacks = groups.config.clicks
+	local name = ({ l = "left", m = "middle", r = "right" })[button]
+	local callback = callbacks[name]
+	if callback then callback(buf, clicks, button, modifiers) end
+end
+
 function M.render()
 	local groups = require("window_groups")
 	local win = vim.g.statusline_winid or vim.api.nvim_get_current_win()
@@ -57,6 +65,7 @@ function M.render()
 	local list = groups.list(win)
 	if #list == 0 then return "" end
 	local parts = {}
+	local config = require("window_groups").config
 	for i, b in ipairs(list) do
 		if vim.api.nvim_buf_is_valid(b) then
 			local is_current_buf = b == buf
@@ -79,10 +88,13 @@ function M.render()
 				icon_seg = icon
 			end
 			local seg = string.format(" %d ", i) .. icon_seg .. string.format(" %s%s ", bname, modified)
-			table.insert(parts, "%#" .. hl_name .. "#" .. seg)
+			local clickable = ""
+			if config.clicks.left or config.clicks.middle or config.clicks.right then
+				clickable = "%" .. b .. "@v:lua.require'window_groups.winbar'.click@"
+			end
+			table.insert(parts, clickable .. "%#" .. hl_name .. "#" .. seg .. "%T")
 		end
 	end
-	local config = require("window_groups").config
 	local accent = ""
 	if config.border then
 		local hl = is_active_win and "GroupsAccentActive" or "GroupsAccentInactive"

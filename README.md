@@ -75,6 +75,10 @@ require("window_groups").setup({
   -- Signature: function(buf: integer) -> icon: string, hl_name: string|nil
   get_icon = nil,
 
+  -- Mouse callbacks for buffer tabs. Each receives buf, clicks, button, modifiers.
+  -- Defaults: left = select, middle = close, right = nothing.
+  clicks = {},
+
   -- Override fallback highlight specs. Applied on top of colorscheme-defined values.
   highlights = {
     active          = {},   -- focused window's tab in the tabline
@@ -91,6 +95,25 @@ require("window_groups").setup({
   -- Default keymaps. Pass false to disable all, or a table to replace entirely.
   -- See the Keymaps section for the full default set.
   keys = nil,  -- nil → register defaults
+})
+```
+
+Mouse callbacks can be overridden independently. The callback receives the
+clicked buffer number, click count, button (`l`, `m`, or `r`), and modifiers:
+
+```lua
+require("window_groups").setup({
+  clicks = {
+    left = function(buf)
+      print("clicked buffer " .. buf)
+    end,
+    middle = function(buf)
+      print("middle-clicked buffer " .. buf)
+    end,
+    right = function()
+      -- Do nothing, or provide another action.
+    end,
+  },
 })
 ```
 

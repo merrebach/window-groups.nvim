@@ -11,6 +11,7 @@ M.config = {
 	border = true,
 	border_char = "▎",
 	get_icon = nil,
+	clicks = {},
 	highlights = {
 		active          = {},
 		current         = {},
@@ -83,6 +84,13 @@ function M.find_owner(buf)
 	return nil
 end
 
+function M.select_buf(buf)
+	local owner = M.find_owner(buf)
+	if not owner or not vim.api.nvim_win_is_valid(owner) then return end
+	vim.api.nvim_set_current_win(owner)
+	vim.api.nvim_win_set_buf(owner, buf)
+end
+
 function M.list(win)
 	return get_list(win)
 end
@@ -143,6 +151,19 @@ function M.close_buf()
 		end
 	end
 end
+
+M.config.clicks = {
+	left = function(buf)
+		M.select_buf(buf)
+	end,
+	middle = function(buf)
+		local owner = M.find_owner(buf)
+		if not owner or not vim.api.nvim_win_is_valid(owner) then return end
+		vim.api.nvim_set_current_win(owner)
+		M.close_buf()
+	end,
+	right = function() end,
+}
 
 function M.close_group()
 	local win = vim.api.nvim_get_current_win()
