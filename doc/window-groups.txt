@@ -97,6 +97,10 @@ All options with their defaults:
       -- Custom icon resolver. nil = auto-detect: nvim-web-devicons → mini.icons → plain text
       -- Signature: function(buf: integer) -> icon: string, hl_name: string|nil
       get_icon = nil,
+
+      -- Mouse callbacks for buffer tabs. Each receives buf, clicks, button, modifiers.
+      -- Defaults: left = select, middle = close, right = nothing.
+      clicks = {},
     
       -- Override fallback highlight specs. Applied on top of colorscheme-defined values.
       highlights = {
@@ -116,6 +120,33 @@ All options with their defaults:
       keys = nil,  -- nil → register defaults
     })
 <
+
+Mouse callbacks can be overridden independently. The callback receives the
+clicked buffer number, click count, button (`l`, `m`, or `r`), and modifiers.
+
+==============================================================================
+MOUSE CLICKS                         *window-groups-window-groups-clicks*
+
+The default callbacks select a buffer with the left mouse button, close it
+with the middle mouse button, and do nothing with the right mouse button.
+Override any callback through |window-groups-window-groups-setup|:
+
+>lua
+    require("window_groups").setup({
+      clicks = {
+        left = function(buf, clicks, button, modifiers)
+          print("clicked buffer " .. buf)
+        end,
+        middle = function(buf)
+          print("middle-clicked buffer " .. buf)
+        end,
+        right = function() end,
+      },
+    })
+<
+
+The callback arguments are the clicked buffer number, click count, button
+(`l`, `m`, or `r`), and mouse modifiers.
 
 
 KEYMAPS                             *window-groups-window-groups.nvim-keymaps*
