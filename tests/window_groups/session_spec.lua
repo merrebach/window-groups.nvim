@@ -165,14 +165,41 @@ describe("encode_cwd()", function()
 	end)
 end)
 
+describe("startup_dir()", function()
+	local function is_dir(path) return path == "." or path == "/proj" end
+
+	it("returns cwd for a bare start", function()
+		assert.equals("/cwd", session.startup_dir({}, "/cwd", is_dir))
+	end)
+
+	it("returns the directory for a single directory argument", function()
+		assert.equals(".", session.startup_dir({ "." }, "/cwd", is_dir))
+		assert.equals("/proj", session.startup_dir({ "/proj" }, "/cwd", is_dir))
+	end)
+
+	it("returns nil for a file argument", function()
+		assert.is_nil(session.startup_dir({ "foo.lua" }, "/cwd", is_dir))
+	end)
+
+	it("returns nil for several arguments", function()
+		assert.is_nil(session.startup_dir({ ".", "/proj" }, "/cwd", is_dir))
+	end)
+end)
+
 describe("should_autoload()", function()
-	local base = { argc = 0, stdin = false, has_ui = true, has_content = false, exists = true }
+	local base = { dir = "/proj", stdin = false, has_ui = true, has_content = false, exists = true }
 
 	it("loads on a bare start with a stored session", function()
 		assert.is_true(session.should_autoload(base))
 	end)
 
-	for key, value in pairs({ argc = 1, stdin = true, has_ui = false, has_content = true, exists = false }) do
+	it("does not load without a startup directory", function()
+		local ctx = vim.deepcopy(base)
+		ctx.dir = nil
+		assert.is_false(session.should_autoload(ctx))
+	end)
+
+	for key, value in pairs({ stdin = true, has_ui = false, has_content = true, exists = false }) do
 		it("does not load when " .. key .. " = " .. tostring(value), function()
 			assert.is_false(session.should_autoload(vim.tbl_extend("force", base, { [key] = value })))
 		end)
@@ -230,8 +257,39 @@ describe("per-cwd sessions", function()
 		session.save({ silent = true })
 		reset_editor()
 
-		session.autoload({ argc = 0, stdin = false, has_ui = true, has_content = false, exists = true })
+		session.autoload({ dir = vim.fn.getcwd(), stdin = false, has_ui = true, has_content = false, exists = true })
 		assert.same({ "pa.lua" }, names(vim.api.nvim_get_current_win()))
+	end)
+
+	it("autoload() restores the session of a directory argument", function()
+		vim.cmd("edit " .. a)
+		vim.api.nvim_win_set_var(0, "group_bufs", { vim.fn.bufnr(a) })
+		session.save({ silent = true })
+		reset_editor()
+		vim.cmd("edit " .. vim.fn.fnameescape(tmp))
+
+		session.autoload({ dir = vim.fn.getcwd(), stdin = false, has_ui = true, has_content = false, exists = true })
+		assert.same({ "pa.lua" }, names(vim.api.nvim_get_current_win()))
+		assert.equals(-1, vim.fn.bufnr("^" .. tmp .. "$"))
+	end)
+
+	it("has_content() ignores directory buffers", function()
+		vim.cmd("edit " .. vim.fn.fnameescape(tmp))
+		assert.is_false(session.has_content())
+	end)
+
+	it("delete() pauses autosave until the next save()", function()
+		local list_uis = vim.api.nvim_list_uis
+		vim.api.nvim_list_uis = function() return { {} } end
+		vim.cmd("edit " .. a)
+		session.save({ silent = true })
+		session.delete()
+		local after_delete = session.autosave()
+		session.save({ silent = true })
+		local after_save = session.autosave()
+		vim.api.nvim_list_uis = list_uis
+		assert.is_false(after_delete)
+		assert.is_true(after_save)
 	end)
 
 	it(":WindowGroupsSession dispatches subcommands", function()
@@ -276,6 +334,9 @@ describe("autosave switch", function()
 		wg.config.session.dir = tmp .. "/sessions"
 		vim.fn.delete(wg.config.session.dir, "rf")
 		vim.cmd("edit " .. file("exit.lua"))
+		-- save() clears a pause left by delete() in earlier tests
+		session.save({ silent = true })
+		vim.fn.delete(session.path())
 		wg.config.session.autosave = true
 		session.setup()
 		local list_uis = vim.api.nvim_list_uis

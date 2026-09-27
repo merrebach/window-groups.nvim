@@ -41,7 +41,7 @@ A `:mksession` file that, in addition to Vim's layout, carries every **Group** a
 _Avoid_: Workspace, project (a Session is keyed by cwd but is not a project concept).
 
 **Autosave**:
-The plugin's own per-cwd **Session** management: save on exit, restore on a bare `nvim` start. One switch (`session.autosave`) for both directions, off by default.
+The plugin's own per-cwd **Session** management: save on exit, restore on `nvim` or `nvim <dir>`. One switch (`session.autosave`) for both directions, off by default.
 _Avoid_: Autoload, auto-session (as separate features).
 
 ## Relationships
