@@ -11,6 +11,12 @@ M.config = {
 	border = true,
 	border_char = "▎",
 	get_icon = nil,
+	session = {
+		autosave = false,
+		dir = vim.fn.stdpath("state") .. "/window-groups/sessions",
+		options = "buffers,curdir,folds,tabpages,winsize",
+		skip_missing = true,
+	},
 	highlights = {
 		active          = {},
 		current         = {},
@@ -361,6 +367,7 @@ function M.setup(opts)
 	build_exclude_set()
 
 	require("window_groups.autocmds").setup()
+	require("window_groups.session").setup()
 
 	if M.config.winbar then
 		vim.o.winbar = "%{%v:lua.require'window_groups.winbar'.render()%}"
