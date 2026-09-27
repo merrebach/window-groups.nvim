@@ -207,10 +207,19 @@ function M.encode_cwd(cwd)
 	return cwd:gsub("[\\/]+$", ""):gsub("[\\/:]", "%%") .. ".vim"
 end
 
--- Autoload only for a bare `nvim` start in a UI with nothing opened yet and a
--- stored session for the cwd.
+-- Directory whose session a startup should restore, or nil. A bare `nvim`
+-- restores `cwd`; `nvim <dir>` (e.g. `nvim .`) restores `<dir>`; anything else
+-- opens files and restores nothing.
+function M.startup_dir(args, cwd, is_dir)
+	if #args == 0 then return cwd end
+	if #args == 1 and is_dir(args[1]) then return args[1] end
+	return nil
+end
+
+-- Autoload only for a startup_dir() start in a UI with nothing opened yet and
+-- a stored session for that directory.
 function M.should_autoload(ctx)
-	return ctx.argc == 0 and not ctx.stdin and ctx.has_ui and not ctx.has_content and ctx.exists
+	return ctx.dir ~= nil and not ctx.stdin and ctx.has_ui and not ctx.has_content and ctx.exists
 end
 
 local function cfg()
@@ -221,20 +230,38 @@ function M.path(cwd)
 	return cfg().dir .. "/" .. M.encode_cwd(cwd or vim.fn.getcwd())
 end
 
+local function is_dir_buf(buf)
+	local name = vim.api.nvim_buf_get_name(buf)
+	return name ~= "" and vim.fn.isdirectory(name) == 1
+end
+
 -- True when any tabpage has an editor Window showing an Eligible Buffer with a
--- name, i.e. there is something worth saving.
+-- file name, i.e. there is something worth saving. Directory buffers (netrw
+-- after `nvim .`) do not count.
 function M.has_content()
 	local groups = require("window_groups")
 	for _, win in ipairs(vim.api.nvim_list_wins()) do
 		if groups.is_editor_win(win) then
 			local buf = vim.api.nvim_win_get_buf(win)
-			if groups.eligible(buf) and vim.api.nvim_buf_get_name(buf) ~= "" then
+			if groups.eligible(buf) and vim.api.nvim_buf_get_name(buf) ~= "" and not is_dir_buf(buf) then
 				return true
 			end
 		end
 	end
 	return false
 end
+
+-- Wipes directory buffers no window shows, left over from `nvim <dir>`.
+local function wipe_hidden_dir_bufs()
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if is_dir_buf(buf) and #vim.fn.win_findbuf(buf) == 0 then
+			pcall(vim.api.nvim_buf_delete, buf, { force = true })
+		end
+	end
+end
+
+-- Set by delete() so the next exit does not immediately recreate the session.
+local _autosave_paused = false
 
 local function notify(msg, level)
 	vim.notify("window-groups: " .. msg, level or vim.log.levels.INFO)
@@ -256,15 +283,17 @@ function M.save(opts)
 		notify("saving session failed: " .. tostring(err), vim.log.levels.ERROR)
 		return false
 	end
+	_autosave_paused = false
 	if not opts.silent then notify("session saved") end
 	return true
 end
 
 function M.load(opts)
 	opts = opts or {}
-	local path = M.path()
+	local dir = opts.dir or vim.fn.getcwd()
+	local path = M.path(dir)
 	if vim.fn.filereadable(path) == 0 then
-		if not opts.silent then notify("no session for " .. vim.fn.getcwd(), vim.log.levels.WARN) end
+		if not opts.silent then notify("no session for " .. dir, vim.log.levels.WARN) end
 		return false
 	end
 	local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(path))
@@ -272,6 +301,7 @@ function M.load(opts)
 		notify("loading session failed: " .. tostring(err), vim.log.levels.ERROR)
 		return false
 	end
+	wipe_hidden_dir_bufs()
 	return true
 end
 
@@ -282,25 +312,37 @@ function M.delete()
 		return false
 	end
 	vim.fn.delete(path)
+	_autosave_paused = true
 	notify("session deleted")
 	return true
+end
+
+-- Autosave on exit, unless the session was deleted in this Neovim instance and
+-- not saved again since.
+function M.autosave()
+	if _autosave_paused or #vim.api.nvim_list_uis() == 0 then return false end
+	return M.save({ silent = true })
 end
 
 local _stdin = false
 
 function M.autoload_context()
+	local is_dir = function(path) return vim.fn.isdirectory(path) == 1 end
+	local dir = M.startup_dir(vim.fn.argv(-1, -1), vim.fn.getcwd(), is_dir)
+	if dir then dir = vim.fn.fnamemodify(dir, ":p") end
 	return {
-		argc = vim.fn.argc(-1),
+		dir = dir,
 		stdin = _stdin,
 		has_ui = #vim.api.nvim_list_uis() > 0,
 		has_content = M.has_content(),
-		exists = vim.fn.filereadable(M.path()) == 1,
+		exists = dir ~= nil and vim.fn.filereadable(M.path(dir)) == 1,
 	}
 end
 
 function M.autoload(ctx)
-	if M.should_autoload(ctx or M.autoload_context()) then
-		M.load({ silent = true })
+	ctx = ctx or M.autoload_context()
+	if M.should_autoload(ctx) then
+		M.load({ dir = ctx.dir, silent = true })
 	end
 end
 
@@ -338,9 +380,7 @@ local function setup_autosave(aug)
 		group = aug,
 		-- nested: :mksession must trigger SessionWritePost to append the Groups.
 		nested = true,
-		callback = function()
-			if #vim.api.nvim_list_uis() > 0 then M.save({ silent = true }) end
-		end,
+		callback = function() M.autosave() end,
 	})
 	if vim.v.vim_did_enter == 1 then
 		-- Plugin was lazy-loaded after startup: VimEnter already fired.
