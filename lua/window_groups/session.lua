@@ -69,9 +69,15 @@ end
 
 -- Neovim side ----------------------------------------------------------------
 
+local function is_dir_buf(buf)
+	local name = vim.api.nvim_buf_get_name(buf)
+	return name ~= "" and vim.fn.isdirectory(name) == 1
+end
+
+-- Absolute file path of `buf`, or nil for unnamed and directory buffers.
 local function buf_path(buf)
 	local name = vim.api.nvim_buf_get_name(buf)
-	if name == "" then return nil end
+	if name == "" or is_dir_buf(buf) then return nil end
 	return vim.fn.fnamemodify(name, ":p")
 end
 
@@ -230,11 +236,6 @@ function M.path(cwd)
 	return cfg().dir .. "/" .. M.encode_cwd(cwd or vim.fn.getcwd())
 end
 
-local function is_dir_buf(buf)
-	local name = vim.api.nvim_buf_get_name(buf)
-	return name ~= "" and vim.fn.isdirectory(name) == 1
-end
-
 -- True when any tabpage has an editor Window showing an Eligible Buffer with a
 -- file name, i.e. there is something worth saving. Directory buffers (netrw
 -- after `nvim .`) do not count.
@@ -295,6 +296,16 @@ function M.load(opts)
 	if vim.fn.filereadable(path) == 0 then
 		if not opts.silent then notify("no session for " .. dir, vim.log.levels.WARN) end
 		return false
+	end
+	-- A session file edits into the current window. If that is a float (lazy.nvim
+	-- UI, notifications, zen mode), the file would end up stuck in the float.
+	if vim.api.nvim_win_get_config(0).relative ~= "" then
+		for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+			if vim.api.nvim_win_get_config(win).relative == "" then
+				vim.api.nvim_set_current_win(win)
+				break
+			end
+		end
 	end
 	local ok, err = pcall(vim.cmd, "source " .. vim.fn.fnameescape(path))
 	if not ok then
