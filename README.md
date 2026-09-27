@@ -430,6 +430,9 @@ require("window_groups").setup({
   saves nothing, so the session stays deleted. A manual
   `:WindowGroupsSession save` resumes autosave; the next Neovim instance
   starts with autosave active again.
+- **Loading a session replaces the layout.** Open floating windows (plugin
+  UIs, notifications, zen mode) are closed; the session is always restored into
+  normal windows.
 - **Sidebars are not part of a session.** Neo-tree and similar windows are not
   files; depending on `'sessionoptions'` they are dropped or come back empty.
   Reopen the sidebar after restoring.

@@ -273,6 +273,40 @@ describe("per-cwd sessions", function()
 		assert.equals(-1, vim.fn.bufnr("^" .. tmp .. "$"))
 	end)
 
+	it("load() restores into a normal window when a float is focused", function()
+		vim.cmd("edit " .. a)
+		vim.cmd("rightbelow vsplit " .. b)
+		session.save({ silent = true })
+		reset_editor()
+		local float_buf = vim.api.nvim_create_buf(false, true)
+		local float = vim.api.nvim_open_win(float_buf, true, { relative = "editor", row = 1, col = 1, width = 20, height = 5 })
+
+		session.load({ silent = true })
+
+		-- `:only` in the session may close the float; it must never show a file.
+		if vim.api.nvim_win_is_valid(float) then
+			assert.equals(float_buf, vim.api.nvim_win_get_buf(float))
+		end
+		local shown = {}
+		for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+			if vim.api.nvim_win_get_config(win).relative == "" then
+				table.insert(shown, vim.fn.fnamemodify(vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)), ":t"))
+			end
+		end
+		assert.same({ "pa.lua", "pb.lua" }, shown)
+		pcall(vim.api.nvim_win_close, float, true)
+	end)
+
+	it("capture() never stores directory buffers", function()
+		vim.cmd("edit " .. a)
+		local dir_buf = vim.fn.bufadd(tmp)
+		vim.api.nvim_win_set_var(0, "group_bufs", { dir_buf, vim.fn.bufnr(a) })
+
+		local state = session.capture(false)
+
+		assert.same({ vim.fn.fnamemodify(a, ":p") }, state.tabs[1].groups[1].bufs)
+	end)
+
 	it("has_content() ignores directory buffers", function()
 		vim.cmd("edit " .. vim.fn.fnameescape(tmp))
 		assert.is_false(session.has_content())
