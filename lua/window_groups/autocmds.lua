@@ -15,6 +15,9 @@ function M.setup()
 	vim.api.nvim_create_autocmd("BufWinEnter", {
 		group = aug,
 		callback = function(ev)
+			-- Session load restores Groups in SessionLoadPost; redirecting here
+			-- would corrupt the layout being rebuilt.
+			if vim.g.SessionLoad then return end
 			local buf = ev.buf
 			if not groups.eligible(buf) then return end
 			local win = ev.win or vim.api.nvim_get_current_win()
