@@ -36,6 +36,14 @@ _Avoid_: Border, divider, indicator.
 A Buffer with `buftype == ""` and `buflisted == true` whose filetype is not in the exclusion list. Only Eligible Buffers can be members of a Group.
 _Avoid_: Real file, normal buffer.
 
+**Session**:
+A `:mksession` file that, in addition to Vim's layout, carries every **Group** as an appended payload line. Restoring the Session restores the layout first, then the Groups.
+_Avoid_: Workspace, project (a Session is keyed by cwd but is not a project concept).
+
+**Autosave**:
+The plugin's own per-cwd **Session** management: save on exit, restore on a bare `nvim` start. One switch (`session.autosave`) for both directions, off by default.
+_Avoid_: Autoload, auto-session (as separate features).
+
 ## Relationships
 
 - A **Window** has exactly one **Group**.
@@ -44,6 +52,8 @@ _Avoid_: Real file, normal buffer.
 - Closing the last **Buffer** in a **Group** closes the **Window** and dissolves the **Group**.
 - Opening an **Eligible Buffer** already in another **Group** (in the same tabpage) redirects focus to that Group's Window instead of duplicating membership.
 - Neo-tree, help, quickfix, terminal, and floating Windows have no **Group** and render no **Winbar** strip.
+- A **Session** stores **Groups** as absolute file paths; restored Groups are matched to Windows by the file each Window displays, then by Window order.
+- **Autosave** writes a **Session** via `:mksession`, so it uses the same payload path as any other Session.
 - A **Group**'s boundary is signaled by an **Accent** in its **Winbar** and a styled `WinSeparator`, both reflecting active/inactive state.
 
 ## Example dialogue

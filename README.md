@@ -21,6 +21,7 @@ Think VS Code editor groups, not Vim tabpages.
 ```lua
 {
   "merrebach/window-groups.nvim",
+  lazy = false, -- required for session autoload, see "Sessions → Loading order"
   config = function()
     require("window_groups").setup({})
   end,
@@ -88,6 +89,19 @@ require("window_groups").setup({
     winsep_inactive = {},   -- WinSeparator for unfocused windows
   },
 
+  -- Session persistence. See the Sessions section.
+  session = {
+    -- Built-in per-cwd sessions: save on exit, restore on a bare `nvim` start.
+    -- One switch for both directions. Off by default.
+    autosave = false,
+    -- Where built-in sessions are stored (one file per working directory).
+    dir = vim.fn.stdpath("state") .. "/window-groups/sessions",
+    -- 'sessionoptions' used for built-in sessions. Your own value is untouched.
+    options = "buffers,curdir,folds,tabpages,winsize",
+    -- Drop files from groups that no longer exist when a session is restored.
+    skip_missing = true,
+  },
+
   -- Default keymaps. Pass false to disable all, or a table to replace entirely.
   -- See the Keymaps section for the full default set.
   keys = nil,  -- nil → register defaults
@@ -151,7 +165,9 @@ most setups):
 ```
 
 > **Note:** lazy-loading window-groups is not recommended. The plugin must run
-> at startup to seed the initial window group and set up the winbar.
+> at startup to seed the initial window group and set up the winbar. With
+> `session.autosave = true`, a `keys`-triggered plugin also never restores your
+> session on startup — see [Loading order](#loading-order-and-lazy-loading).
 
 ## API
 
@@ -169,12 +185,135 @@ wg.cycle("next" | "prev")           -- cycle through buffers in current window's
 wg.move_buf("left" | "right" | "up" | "down") -- move current buffer to the neighbor window in that direction
 wg.split("left" | "right" | "up" | "down")    -- open a split, carry current buffer into the new window
 
+-- Sessions
+local session = require("window_groups.session")
+session.save()                      -- save the session of the cwd (same as :WindowGroupsSession save)
+session.load()                      -- load the session of the cwd
+session.delete()                    -- delete the session of the cwd
+session.path()                      -- path of the session file for the cwd
+
 -- Introspection
 wg.eligible(buf)                    -- bool: can this buffer join a group
 wg.list(win)                        -- ordered buffer list for a window (integers)
 wg.add(win, buf)                    -- add buffer to window's group
 wg.remove(win, buf)                 -- remove buffer from window's group
 ```
+
+## Sessions
+
+Vim's `:mksession` restores windows, tabpages and buffers, but not the groups
+this plugin keeps per window. window-groups.nvim closes that gap natively,
+without depending on any session plugin. There are two layers:
+
+1. **Groups travel with every `:mksession`** — always on, nothing to configure.
+2. **Built-in session management** — optional, enabled with
+   `session.autosave = true`.
+
+### Groups in any session file
+
+Whenever a session file is written with `:mksession`, the plugin appends one
+line carrying the groups of every window to that same file. Sourcing the file
+restores the layout first and then the groups. This works with:
+
+- plain `:mksession` / `:source`
+- session managers built on `:mksession`, e.g. persistence.nvim, auto-session,
+  mini.sessions
+
+No extra files are created. If the plugin is not installed when a session is
+sourced, the appended line is skipped silently and the session still loads.
+Sessions saved before this feature existed load fine too: each window then
+starts with a group containing the buffer it shows.
+
+Details worth knowing:
+
+- Files are stored by absolute path. With `skip_missing = true` (default),
+  files deleted since the session was saved are dropped from their group.
+- Restored buffers stay unloaded until you switch to them, so large groups
+  restore quickly.
+- If `'sessionoptions'` lacks `tabpages`, only the current tabpage's groups are
+  stored — just like `:mksession` itself.
+
+### Built-in session management
+
+With `session.autosave = true` the plugin manages one session per working
+directory:
+
+- **On exit** (`VimLeavePre`) it saves the session to
+  `session.dir/<encoded cwd>.vim`. If no window shows a file, nothing is
+  written, so an empty editor never overwrites a good session.
+- **On startup** it restores the session of the cwd, but only when *all* of
+  these hold:
+  - `nvim` was started without file arguments (`nvim`, not `nvim foo.lua`)
+  - nothing is piped via stdin
+  - a UI is attached (not `--headless`)
+  - no file has been opened yet
+  - a session for the cwd exists
+
+Saving and restoring share one switch on purpose: neither is useful alone.
+
+```lua
+require("window_groups").setup({
+  session = { autosave = true },
+})
+```
+
+### Loading order and lazy-loading
+
+> **Important:** automatic restore runs on `VimEnter`. **The plugin must be
+> loaded — and `setup()` called — during startup**, or there is nothing left to
+> trigger it.
+
+| How the plugin is loaded                       | Autoload on startup |
+| ---------------------------------------------- | ------------------- |
+| `lazy = false` / plain `setup()` in `init.lua` | ✅ works            |
+| lazy.nvim `event = "VeryLazy"`                 | ✅ works (see below) |
+| lazy.nvim `keys`, `cmd` or `ft` triggers       | ❌ never restores   |
+
+- **Recommended:** load eagerly. With lazy.nvim, set `lazy = false` (as in the
+  Installation snippet). Make sure this is not overridden by
+  `defaults = { lazy = true }` in your lazy.nvim config.
+- **`VeryLazy` works:** when `setup()` runs after startup has finished, it
+  detects this (`v:vim_did_enter`) and restores immediately instead of waiting
+  for `VimEnter`. The restore still only happens if the conditions above hold,
+  e.g. no file has been opened in the meantime.
+- **`keys` / `cmd` / `ft` do not work:** the plugin only loads once you press a
+  key, run a command or open a file type — by then you are already editing and
+  the restore conditions no longer hold. Saving on exit still works in that
+  case, restoring does not.
+- **Dashboards:** a start screen (snacks.nvim dashboard, alpha, …) does not
+  count as "a file has been opened", so it does not prevent the restore.
+
+To check what happens in your setup, start `nvim` in a project with a saved
+session and run `:WindowGroupsSession load` manually — if that restores the
+groups but startup does not, the plugin is loaded too late.
+
+### Commands
+
+`:WindowGroupsSession {subcommand}` works regardless of `autosave`, so you can
+try sessions before turning on automation:
+
+| Command                       | Action                                   |
+| ----------------------------- | ---------------------------------------- |
+| `:WindowGroupsSession save`   | Save the session of the current cwd      |
+| `:WindowGroupsSession load`   | Load the session of the current cwd      |
+| `:WindowGroupsSession delete` | Delete the session of the current cwd    |
+
+### Using another session manager
+
+If you already use a session manager built on `:mksession`, keep
+`autosave = false` (the default). Your manager saves and restores as before and
+the groups travel along automatically. Enabling `autosave` as well would make
+two managers restore on startup.
+
+resession.nvim does not use `:mksession`, so groups are not persisted with it.
+
+### Known limitations
+
+- Sidebars such as neo-tree are not files. Depending on `'sessionoptions'`,
+  `:mksession` either drops their windows or brings them back empty. Reopen the
+  sidebar after restoring.
+- Unnamed buffers (`[No Name]`) are not stored.
+- A group whose shown file was deleted is matched to a window by position.
 
 ## Highlights
 
@@ -292,6 +431,8 @@ require("window_groups").setup({
   `:bdelete` — no group logic applies.
 - **`split` with no eligible buffer** opens a blank scratch split with no group
   entry.
+- **Groups are not rebuilt while a session loads.** The usual "focus the owning
+  window" redirect is suspended until the session has finished loading.
 
 ## Contributing
 
