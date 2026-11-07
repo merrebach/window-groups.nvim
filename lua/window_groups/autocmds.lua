@@ -31,6 +31,9 @@ function M.setup()
 					end
 					if vim.api.nvim_win_is_valid(owner) then
 						vim.api.nvim_set_current_win(owner)
+						if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_win_get_buf(owner) ~= buf then
+							vim.api.nvim_win_set_buf(owner, buf)
+						end
 					end
 				end)
 				return

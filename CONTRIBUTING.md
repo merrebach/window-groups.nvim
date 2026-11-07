@@ -32,6 +32,30 @@ make test
 
 Tests run with plenary.nvim in a headless Neovim instance.
 
+## Demo recordings
+
+The GIFs in `assets/` are recorded with [VHS](https://github.com/charmbracelet/vhs)
+from the tapes in `demo/tapes/`. Re-record them when the winbar or a recorded
+behaviour changes:
+
+```sh
+make demo                          # all tapes
+demo/record.sh move-buffer         # a single tape
+```
+
+`demo/init.lua` is an isolated config (`NVIM_APPNAME=window-groups-demo`), so
+recording never touches your own config, state or sessions. It needs
+`ffmpeg`, `ttyd` and a Nerd Font (JetBrainsMono Nerd Font Mono by default).
+
+VHS v0.12.0 finishes without writing any file
+([charmbracelet/vhs#787](https://github.com/charmbracelet/vhs/issues/787)).
+Until a fixed release ships, install v0.11.0 and point `VHS` at it:
+
+```sh
+GOBIN=~/.local/bin go install github.com/charmbracelet/vhs@v0.11.0
+VHS=~/.local/bin/vhs make demo
+```
+
 ## Architecture
 
 Before adding something significant, read:

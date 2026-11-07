@@ -4,3 +4,10 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# demo recording dependencies
+demo/.deps/
+demo/.out/
+
+# graphify knowledge graph (generated)
+graphify-out/

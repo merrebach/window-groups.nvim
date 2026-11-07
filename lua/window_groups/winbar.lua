@@ -43,7 +43,8 @@ end
 local function basename(buf)
 	local name = vim.api.nvim_buf_get_name(buf)
 	if name == "" then return "[No Name]" end
-	return vim.fn.fnamemodify(name, ":t")
+	-- A literal % would be read as a statusline item.
+	return (vim.fn.fnamemodify(name, ":t"):gsub("%%", "%%%%"))
 end
 
 function M.render()

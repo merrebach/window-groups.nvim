@@ -5,6 +5,27 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Demo recordings in the README, reproducible with `make demo` (VHS tapes in
+  `demo/`).
+
+### Fixed
+
+- Highlight groups are empty after switching colorschemes: fallbacks are now
+  re-applied when `:hi clear` wiped them, colorscheme-defined groups still win.
+- File names containing `%` are rendered wrongly in the winbar.
+- `close_buf` removed a modified buffer from its group although deleting it
+  failed, leaving it listed but in no group. It now refuses and keeps the
+  buffer. `close_group` keeps modified buffers in the group and the window open.
+- Help, quickfix, terminal and file tree windows showed an empty winbar row.
+  The winbar is now set per window, only on windows with a group.
+- `move_buf` of the last buffer in a group left a hidden scratch buffer in the
+  source window, which then blocked moving back (#18). The emptied window now
+  closes, as with `close_buf`.
+- Opening a buffer owned by another window focused that window but kept
+  showing its previous buffer. The owner now shows the opened buffer.
+
 ## [0.2.0] - 2026-09-27
 
 ### Added

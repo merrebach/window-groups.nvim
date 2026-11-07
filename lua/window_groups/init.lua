@@ -136,6 +136,10 @@ function M.close_buf()
 		pcall(vim.cmd, "bdelete " .. buf)
 		return
 	end
+	if vim.bo[buf].modified then
+		vim.notify("window-groups: buffer has unsaved changes, write it first", vim.log.levels.WARN)
+		return
+	end
 	table.remove(list, idx)
 	set_list(win, list)
 	local next_buf = pick_neighbor_buf(list, idx)
@@ -154,11 +158,27 @@ function M.close_group()
 	local win = vim.api.nvim_get_current_win()
 	if not M.is_editor_win(win) then return end
 	local list = vim.deepcopy(get_list(win))
-	set_list(win, {})
+	local kept, closing = {}, {}
 	for _, buf in ipairs(list) do
-		if buf_valid(buf) then pcall(vim.api.nvim_buf_delete, buf, { force = false }) end
+		if buf_valid(buf) then
+			table.insert(vim.bo[buf].modified and kept or closing, buf)
+		end
 	end
-	if #vim.api.nvim_tabpage_list_wins(0) > 1 and vim.api.nvim_win_is_valid(win) then
+	set_list(win, kept)
+	if #kept > 0 then
+		-- Show a kept buffer first so deleting the others cannot close the window.
+		if not vim.tbl_contains(kept, vim.api.nvim_win_get_buf(win)) then
+			vim.api.nvim_win_set_buf(win, kept[1])
+		end
+		vim.notify(
+			string.format("window-groups: kept %d buffer(s) with unsaved changes", #kept),
+			vim.log.levels.WARN
+		)
+	end
+	for _, buf in ipairs(closing) do
+		pcall(vim.api.nvim_buf_delete, buf, { force = false })
+	end
+	if #kept == 0 and #vim.api.nvim_tabpage_list_wins(0) > 1 and vim.api.nvim_win_is_valid(win) then
 		pcall(vim.api.nvim_win_close, win, false)
 	end
 end
@@ -215,11 +235,13 @@ function M.move_buf(direction)
 	table.remove(from_list, from_idx)
 	set_list(from_win, from_list)
 	local replacement = pick_neighbor_buf(from_list, from_idx)
+	local close_from = false
 	if replacement and buf_valid(replacement) then
 		vim.api.nvim_win_set_buf(from_win, replacement)
 	else
-		local scratch = vim.api.nvim_create_buf(false, true)
-		vim.api.nvim_win_set_buf(from_win, scratch)
+		-- An empty Group dissolves with its Window. to_win exists, so from_win
+		-- is never the last window here.
+		close_from = true
 	end
 	local to_list = get_list(to_win)
 	if not index_of(to_list, buf) then
@@ -228,6 +250,9 @@ function M.move_buf(direction)
 	end
 	vim.api.nvim_win_set_buf(to_win, buf)
 	vim.api.nvim_set_current_win(to_win)
+	if close_from then
+		pcall(vim.api.nvim_win_close, from_win, false)
+	end
 end
 
 function M.split(direction)
@@ -287,6 +312,10 @@ function M.seed_current_window()
 	end
 end
 
+-- Last spec set per highlight group, to tell our fallbacks from colorscheme
+-- definitions on the next ColorScheme.
+local _applied_hl = {}
+
 local function setup_default_highlights(hl_opts)
 	local function get_hl(name)
 		return vim.api.nvim_get_hl(0, { name = name, link = false })
@@ -320,12 +349,16 @@ local function setup_default_highlights(hl_opts)
 	}
 	for group, fallback in pairs(fallbacks) do
 		local override = overrides[group] or {}
-		if vim.fn.hlexists(group) == 0 then
+		local existing = get_hl(group)
+		-- Ours when empty (never set, or wiped by `:hi clear`) or unchanged since
+		-- we set it; anything else was defined by the colorscheme.
+		local ours = next(existing) == nil or vim.deep_equal(existing, _applied_hl[group])
+		if ours then
 			vim.api.nvim_set_hl(0, group, vim.tbl_extend("force", fallback, override))
 		elseif next(override) ~= nil then
-			local existing = get_hl(group)
 			vim.api.nvim_set_hl(0, group, vim.tbl_extend("force", existing, override))
 		end
+		_applied_hl[group] = get_hl(group)
 	end
 end
 
@@ -353,6 +386,47 @@ local function set_win_sep_hl(win, is_active)
 	end)
 end
 
+local WINBAR = "%{%v:lua.require'window_groups.winbar'.render()%}"
+
+-- The winbar is set per window: a global value would reserve an empty row in
+-- windows without a Group (help, quickfix, file trees), since an empty local
+-- value falls back to the global one.
+local function sync_winbar(win)
+	if not vim.api.nvim_win_is_valid(win) then return end
+	if vim.api.nvim_win_get_config(win).relative ~= "" then return end
+	local want = M.is_editor_win(win) and WINBAR or ""
+	local cur = vim.api.nvim_get_option_value("winbar", { win = win, scope = "local" })
+	-- Leave winbars set by other plugins alone.
+	if cur ~= want and (cur == "" or cur == WINBAR) then
+		vim.api.nvim_set_option_value("winbar", want, { win = win, scope = "local" })
+	end
+end
+
+local function setup_winbar()
+	local aug = vim.api.nvim_create_augroup("WindowGroupsWinbar", { clear = true })
+	vim.api.nvim_create_autocmd({ "BufWinEnter", "WinNew", "TermOpen" }, {
+		group = aug,
+		callback = function() sync_winbar(vim.api.nvim_get_current_win()) end,
+	})
+	vim.api.nvim_create_autocmd({ "FileType", "OptionSet" }, {
+		group = aug,
+		pattern = { "*" },
+		callback = function(ev)
+			if ev.event == "OptionSet" and ev.match ~= "buftype" and ev.match ~= "buflisted" then return end
+			for _, win in ipairs(vim.fn.win_findbuf(ev.buf ~= 0 and ev.buf or vim.api.nvim_get_current_buf())) do
+				sync_winbar(win)
+			end
+		end,
+	})
+	vim.api.nvim_create_autocmd("SessionLoadPost", {
+		group = aug,
+		callback = function()
+			for _, win in ipairs(vim.api.nvim_list_wins()) do sync_winbar(win) end
+		end,
+	})
+	for _, win in ipairs(vim.api.nvim_list_wins()) do sync_winbar(win) end
+end
+
 local _setup_done = false
 
 function M.setup(opts)
@@ -370,7 +444,7 @@ function M.setup(opts)
 	require("window_groups.session").setup()
 
 	if M.config.winbar then
-		vim.o.winbar = "%{%v:lua.require'window_groups.winbar'.render()%}"
+		setup_winbar()
 	end
 
 	local aug = vim.api.nvim_create_augroup("WindowGroupsHighlights", { clear = true })

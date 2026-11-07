@@ -1,4 +1,4 @@
-.PHONY: lint test install-hooks
+.PHONY: lint test install-hooks demo
 
 lint:
 	luacheck lua/ tests/
@@ -11,3 +11,6 @@ install-hooks:
 	@printf '#!/bin/sh\nmake lint\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "Pre-commit hook installed. Run 'make lint' to check manually."
+
+demo:
+	demo/record.sh

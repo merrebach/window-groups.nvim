@@ -8,6 +8,21 @@ focus there instead of duplicating it.
 Think VS Code editor groups, not Vim tabpages. Groups can be saved and
 restored with sessions — see Sessions.
 
+![Each window keeps its own group of buffers](assets/demo.gif)
+
+**Move a buffer to the neighbouring window's group:**
+
+![Moving buffers between groups](assets/move-buffer.gif)
+
+**A buffer lives in exactly one group.** Opening it from another window jumps
+to the window that already owns it:
+
+![Opening an owned buffer jumps to its window](assets/single-membership.gif)
+
+**Closing a buffer shows its neighbour; an empty group closes its window:**
+
+![Closing buffers and groups](assets/close-buffer.gif)
+
 ## Requirements
 
 - Neovim >= 0.10
@@ -64,7 +79,7 @@ require("window_groups").setup({
   -- Filetypes merged with built-in exclusions: neo-tree, snacks_dashboard, dashboard
   exclude_filetypes = {},
 
-  -- Set to false if you manage vim.o.winbar yourself (heirline, lualine, etc.)
+  -- Set to false if you manage the winbar yourself (heirline, lualine, etc.)
   winbar = true,
 
   -- Set to false to disable the group boundary accent and WinSeparator styling.
@@ -220,6 +235,8 @@ layout, then the groups. This works with plain `:mksession` / `:source`,
 auto-session, mini.sessions). No extra files are created.
 
 **Built-in session management:**
+
+![Groups restored after a restart](assets/session.gif)
 
 ```lua
 require("window_groups").setup({
@@ -406,7 +423,11 @@ require("window_groups").setup({
 - **Single-membership is per-tabpage.** A buffer can appear in different groups
   across tabpages. Within one tabpage it belongs to at most one group.
 - **Winbar only appears on editor windows.** Floats, explorer sidebars, help,
-  quickfix, and terminal windows render no winbar strip.
+  quickfix, and terminal windows get no winbar row at all. The winbar is set
+  per window; windows whose winbar another plugin set are left alone.
+- **Unsaved changes are never dropped.** `close_buf` refuses to close a
+  modified buffer. `close_group` closes the clean buffers, keeps the modified
+  ones in the group and leaves the window open.
 - **`setup()` is idempotent.** Calling it more than once is a no-op.
 - **`move_buf` fails silently on non-editor neighbors.** If the neighbor window
   is a sidebar or float, a warning is shown and the buffer stays where it is.
